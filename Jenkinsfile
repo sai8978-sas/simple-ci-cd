@@ -5,7 +5,8 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/sai8978-sas/simple-ci-cd.git'
+                git url: 'https://github.com/sai8978-sas/simple-ci-cd.git',
+                    branch: 'main'
             }
         }
 
