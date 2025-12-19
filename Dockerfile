@@ -1,4 +1,10 @@
-FROM alpine
-COPY app.sh /app.sh
-CMD ["/app.sh"]
+FROM rockylinux:9
+
+WORKDIR /app
+
+COPY app.sh .
+
+RUN chmod +x app.sh
+
+CMD ["./app.sh"]
 

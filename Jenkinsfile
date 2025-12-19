@@ -1,7 +1,13 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "simple-ci-cd-app"
+        CONTAINER_NAME = "simple-ci-cd"
+    }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -11,7 +17,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                  docker build -t simple-ci-cd-app .
+                docker build -t $IMAGE_NAME:latest .
                 '''
             }
         }
@@ -19,8 +25,12 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                  docker rm -f simple-ci-cd || true
-                  docker run -d --name simple-ci-cd simple-ci-cd-app
+                docker stop $CONTAINER_NAME || true
+                docker rm $CONTAINER_NAME || true
+
+                docker run -d \
+                  --name $CONTAINER_NAME \
+                  $IMAGE_NAME:latest
                 '''
             }
         }
