@@ -2,17 +2,10 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "DOCKERHUB_USERNAME/sample-app"
+        DOCKER_IMAGE = "sai8978/sample-app"
     }
 
     stages {
-
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/sai8978-sas/sample-cicd.git'
-            }
-        }
 
         stage('Build Docker Image') {
             steps {
@@ -41,8 +34,8 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                sed -i "s|DOCKERHUB_USERNAME|$DOCKER_USER|g" k8s/deployment.yaml
                 kubectl apply -f k8s/
+                kubectl rollout status deployment/sample-app
                 '''
             }
         }
