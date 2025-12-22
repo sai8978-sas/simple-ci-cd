@@ -2,22 +2,25 @@ pipeline {
     agent any
 
     environment {
+        DOCKER_USER  = "saikumartoparam654"
         DOCKER_IMAGE = "saikumartoparam654/sample-app"
-        KUBECONFIG = "/etc/kubernetes/admin.conf"
+        KUBECONFIG   = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/sai8978-sas/simple-ci-cd.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 sh '''
-                  docker build -t $DOCKER_IMAGE:latest .
+                  docker build -t $DOCKER_IMAGE:${BUILD_NUMBER} .
+                  docker tag $DOCKER_IMAGE:${BUILD_NUMBER} $DOCKER_IMAGE:latest
                 '''
             }
         }
@@ -26,11 +29,11 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
+                    usernameVariable: 'DOCKER_USERNAME',
+                    passwordVariable: 'DOCKER_PASSWORD'
                 )]) {
                     sh '''
-                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                      echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                     '''
                 }
             }
@@ -39,6 +42,7 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 sh '''
+                  docker push $DOCKER_IMAGE:${BUILD_NUMBER}
                   docker push $DOCKER_IMAGE:latest
                 '''
             }
@@ -47,7 +51,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                  sed -i "s|IMAGE_NAME|$DOCKER_IMAGE:latest|g" k8s/deployment.yaml
+                  sed -i "s|IMAGE_TAG|${BUILD_NUMBER}|g" k8s/deployment.yaml
                   kubectl apply -f k8s/
                 '''
             }
@@ -59,7 +63,7 @@ pipeline {
             echo "✅ CI/CD Pipeline completed successfully"
         }
         failure {
-            echo "❌ CI/CD Pipeline failed"
+            echo "❌ Pipeline failed"
         }
     }
 }
