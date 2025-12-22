@@ -2,35 +2,47 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "simple-ci-cd-app"
-        CONTAINER_NAME = "simple-ci-cd"
+        DOCKER_IMAGE = "DOCKERHUB_USERNAME/sample-app"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/sai8978-sas/sample-cicd.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                docker build -t $IMAGE_NAME:latest .
-                '''
+                sh 'docker build -t $DOCKER_IMAGE:latest .'
             }
         }
 
-        stage('Deploy') {
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh 'docker push $DOCKER_IMAGE:latest'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                docker stop $CONTAINER_NAME || true
-                docker rm $CONTAINER_NAME || true
-
-                docker run -d \
-                  --name $CONTAINER_NAME \
-                  $IMAGE_NAME:latest
+                sed -i "s|DOCKERHUB_USERNAME|$DOCKER_USER|g" k8s/deployment.yaml
+                kubectl apply -f k8s/
                 '''
             }
         }
